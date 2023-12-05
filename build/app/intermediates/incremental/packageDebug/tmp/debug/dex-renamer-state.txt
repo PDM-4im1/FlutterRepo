@@ -1,0 +1,4 @@
+#Tue Dec 05 00:42:53 CET 2023
+base.0=C\:\\Users\\ahmed\\OneDrive\\Bureau\\ShareCommuteFlutter\\share_commute\\build\\app\\intermediates\\dex\\debug\\mergeDexDebug\\classes.dex
+path.0=classes.dex
+renamed.0=classes.dex
