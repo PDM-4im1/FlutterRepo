@@ -1,8 +1,21 @@
 import 'package:http/http.dart' as http;
 import '/Models/Car_Model.dart';
+import '/Models/UserModel.dart';
 import 'dart:convert';
 
 class CarService {
+    static Future<List<Users>> fetchDataDrivers() async {
+  final response = await http.get(
+    Uri.parse('http://localhost:9090/moyenDeTransport/findAllDrivers'),
+  );
+
+  if (response.statusCode == 200) {
+    final List<dynamic> responseData = json.decode(response.body);
+    return responseData.map((data) => Users.fromJson(data)).toList();
+  } else {
+    throw Exception('Failed to load drivers');
+  }
+}
   static Future<List<Car>> fetchCars() async {
     final response = await http.get(
       Uri.parse('http://localhost:9090/moyenDeTransport/findAllMoyenDeTransport'),
@@ -78,4 +91,6 @@ class CarService {
       throw Exception('Failed to add car');
     }
   }
+
+
 }

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application/Models/UserModel.dart';
 import '../Models/Car_Model.dart';
 import '/Services/CarService.dart';
 
 class CarProvider extends ChangeNotifier {
   List<Car> _cars = [];
+  List<Users> _drivers = [];
   bool _isLoading = false;
 
   List<Car> get cars => _cars;
+  List<Users> get drivers => _drivers; // New property for drivers
   bool get isLoading => _isLoading;
 
   Future<void> fetchCars() async {
@@ -17,6 +20,23 @@ class CarProvider extends ChangeNotifier {
       final List<Car> fetchedCars = await CarService.fetchCars();
 
       _cars = fetchedCars;
+    } catch (e) {
+      print('Error: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchDrivers() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final List<Users> fetchedDrivers = await CarService.fetchDataDrivers();
+
+      _drivers = fetchedDrivers;
+      notifyListeners(); // Make sure to call notifyListeners() after updating the state
     } catch (e) {
       print('Error: $e');
     } finally {

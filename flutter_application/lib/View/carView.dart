@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application/Models/UserModel.dart';
 import 'package:provider/provider.dart';
 import '../Models/Car_Model.dart';
 import '../Models/CarProvider.dart';
-import '../Services/CarService.dart';
 
 class CarTableView extends StatefulWidget {
   @override
@@ -10,11 +10,14 @@ class CarTableView extends StatefulWidget {
 }
 
 class _CarTableViewState extends State<CarTableView> {
-  bool _isDialogShowing = false;
   @override
   void initState() {
     super.initState();
-    Provider.of<CarProvider>(context, listen: false).fetchCars();
+
+    Future.delayed(Duration.zero, () {
+      Provider.of<CarProvider>(context, listen: false).fetchDrivers();
+      Provider.of<CarProvider>(context, listen: false).fetchCars();
+    });
   }
 
   final ScrollController _scrollController = ScrollController();
@@ -249,152 +252,165 @@ class _CarTableViewState extends State<CarTableView> {
     );
   }
 
+  Future<void> showAssignDriverDialog(List<Users> drivers) async {
+    BuildContext dialogContext;
+
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        dialogContext = context;
+        return AlertDialog(
+          title: Text('Assign Driver'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: drivers.map((driver) {
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage:
+                        AssetImage('assets/images/driver_avatar.jpg'),
+                    radius: 20,
+                  ),
+                  title: Text('${driver.name} ${driver.firstName}'),
+                  subtitle: Text(driver.email),
+                  trailing: ElevatedButton(
+                    onPressed: () {
+                      // TODO: Implement the logic to assign the selected driver to the car
+                      // You can use the 'driver' object for further processing
+                      Navigator.of(dialogContext).pop(); // Close the dialog
+                    },
+                    child: Text('Assign Car'),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     List<Car> cars = Provider.of<CarProvider>(context).cars;
+    List<Users> drivers = Provider.of<CarProvider>(context).drivers;
     bool isLoading = Provider.of<CarProvider>(context).isLoading;
 
-    return Scaffold(
-      body: Row(
-        children: [
-          Container(
-            width: 250,
-            color: Colors.grey[200],
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'Admin Menu',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: EdgeInsets.all(16),
+          color: Colors.blue,
+          child: Row(
+            children: [
+              Text(
+                'Cars Dashboard',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
-                ListTile(
-                  leading: Icon(Icons.dashboard),
-                  title: Text('Dashboard'),
-                  onTap: () {},
-                ),
-                ListTile(
-                  leading: Icon(Icons.settings),
-                  title: Text('Settings'),
-                  onTap: () {},
-                ),
-              ],
-            ),
+              ),
+              Spacer(),
+            ],
           ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  padding: EdgeInsets.all(16),
-                  color: Colors.blue,
-                  child: Row(
-                    children: [
-                      Text(
-                        'Cars Dashboard',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Spacer(),
+        ),
+        Expanded(
+          child: isLoading
+              ? Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  controller: _scrollController,
+                  child: DataTable(
+                    columns: [
+                      DataColumn(label: Text('Marque')),
+                      DataColumn(label: Text('Type')),
+                      DataColumn(label: Text('Matricule')),
+                      DataColumn(label: Text('Actions')),
                     ],
-                  ),
-                ),
-                Expanded(
-                  child: isLoading
-                      ? Center(child: CircularProgressIndicator())
-                      : SingleChildScrollView(
-                          controller: _scrollController,
-                          child: DataTable(
-                            columns: [
-                              DataColumn(label: Text('Marque')),
-                              DataColumn(label: Text('Type')),
-                              DataColumn(label: Text('Matricule')),
-                              DataColumn(label: Text('Actions')),
-                            ],
-                            rows: cars
-                                .asMap()
-                                .entries
-                                .map(
-                                  (entry) => DataRow(
-                                    cells: [
-                                      DataCell(Text(entry.value.marque)),
-                                      DataCell(Text(entry.value.type)),
-                                      DataCell(Text(entry.value.matricule)),
-                                      DataCell(
-                                        Row(
-                                          children: [
-                                            ElevatedButton.icon(
-                                              onPressed: () async {
-                                                await showEditDialog(
-                                                    entry.value);
-                                              },
-                                              icon: Icon(Icons.edit),
-                                              label: Text('Edit'),
-                                              style: ButtonStyle(
-                                                backgroundColor:
-                                                    MaterialStateProperty.all<
-                                                        Color>(Colors.blue),
-                                              ),
-                                            ),
-                                            SizedBox(width: 8),
-                                            ElevatedButton.icon(
-                                              onPressed: () async {
-                                                await showDeleteConfirmationDialog(
-                                                    entry.value);
-                                              },
-                                              icon: Icon(Icons.delete),
-                                              label: Text('Delete'),
-                                              style: ButtonStyle(
-                                                backgroundColor:
-                                                    MaterialStateProperty.all<
-                                                        Color>(Colors.red),
-                                              ),
-                                            ),
-                                            SizedBox(width: 8),
-                                            ElevatedButton.icon(
-                                              onPressed: () {},
-                                              icon: Icon(Icons.person),
-                                              label: Text('Assign'),
-                                              style: ButtonStyle(
-                                                backgroundColor:
-                                                    MaterialStateProperty.all<
-                                                        Color>(Colors.green),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                    rows: cars
+                        .asMap()
+                        .entries
+                        .map(
+                          (entry) => DataRow(
+                            cells: [
+                              DataCell(Text(entry.value.marque)),
+                              DataCell(Text(entry.value.type)),
+                              DataCell(Text(entry.value.matricule)),
+                              DataCell(
+                                Row(
+                                  children: [
+                                    ElevatedButton.icon(
+                                      onPressed: () async {
+                                        await showEditDialog(entry.value);
+                                      },
+                                      icon: Icon(Icons.edit),
+                                      label: Text('Edit'),
+                                      style: ButtonStyle(
+                                        backgroundColor:
+                                            MaterialStateProperty.all<Color>(
+                                                Colors.blue),
                                       ),
-                                    ],
-                                  ),
-                                )
-                                .toList(),
+                                    ),
+                                    SizedBox(width: 8),
+                                    ElevatedButton.icon(
+                                      onPressed: () async {
+                                        await showDeleteConfirmationDialog(
+                                            entry.value);
+                                      },
+                                      icon: Icon(Icons.delete),
+                                      label: Text('Delete'),
+                                      style: ButtonStyle(
+                                        backgroundColor:
+                                            MaterialStateProperty.all<Color>(
+                                                Colors.red),
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        WidgetsBinding.instance!
+                                            .addPostFrameCallback((_) {
+                                          showAssignDriverDialog(drivers);
+                                        });
+                                      },
+                                      icon: Icon(Icons.person),
+                                      label: Text('Assign'),
+                                      style: ButtonStyle(
+                                        backgroundColor:
+                                            MaterialStateProperty.all<Color>(
+                                                Colors.green),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                ),
-                SizedBox(height: 16),
-                TextButton.icon(
-                  onPressed: () {
-                    showAddDialog();
-                  },
-                  icon: Icon(Icons.add),
-                  label: Text('Add Car'),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
+                        )
+                        .toList(),
                   ),
                 ),
-              ],
-            ),
+        ),
+        SizedBox(height: 16),
+        TextButton.icon(
+          onPressed: () {
+            showAddDialog();
+          },
+          icon: Icon(Icons.add),
+          label: Text('Add Car'),
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.symmetric(horizontal: 16),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
