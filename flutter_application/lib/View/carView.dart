@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '/Models/CarModel.dart';
-import '/Services/CarService.dart';
+import 'package:provider/provider.dart';
+import '../Models/Car_Model.dart';
+import '../Models/CarProvider.dart';
+import '../Services/CarService.dart';
 
 class CarTableView extends StatefulWidget {
   @override
@@ -8,33 +10,24 @@ class CarTableView extends StatefulWidget {
 }
 
 class _CarTableViewState extends State<CarTableView> {
-  List<Car> cars = [];
-  bool isLoading = false;
-  final ScrollController _scrollController = ScrollController();
-  double _rowHeight = 50.0; // Adjust this value based on the actual row height
-
+  bool _isDialogShowing = false;
   @override
   void initState() {
     super.initState();
-    fetchData();
+    Provider.of<CarProvider>(context, listen: false).fetchCars();
   }
 
-  Future<void> fetchData() async {
-    try {
-      setState(() {
-        isLoading = true;
-      });
-      final List<Car> fetchedCars = await CarService.fetchCars();
-      setState(() {
-        cars = fetchedCars;
-        isLoading = false;
-      });
-    } catch (e) {
-      print('Error: $e');
-      setState(() {
-        isLoading = false;
-      });
-    }
+  final ScrollController _scrollController = ScrollController();
+  double _rowHeight = 50.0;
+
+  void _scrollToEditedItem(Car car) {
+    int index =
+        Provider.of<CarProvider>(context, listen: false).cars.indexOf(car);
+    _scrollController.animateTo(
+      index * _rowHeight,
+      duration: Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
   }
 
   Future<void> showEditDialog(Car car) async {
@@ -45,26 +38,60 @@ class _CarTableViewState extends State<CarTableView> {
     TextEditingController matriculeController =
         TextEditingController(text: car.matricule);
 
+    GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
     await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Edit Car'),
-          content: Column(
-            children: [
-              TextFormField(
-                controller: marqueController,
-                decoration: InputDecoration(labelText: 'Marque'),
-              ),
-              TextFormField(
-                controller: typeController,
-                decoration: InputDecoration(labelText: 'Type'),
-              ),
-              TextFormField(
-                controller: matriculeController,
-                decoration: InputDecoration(labelText: 'Matricule'),
-              ),
-            ],
+          content: Form(
+            key: formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: marqueController,
+                  decoration: InputDecoration(
+                    labelText: 'Marque',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Please enter Marque';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 12),
+                TextFormField(
+                  controller: typeController,
+                  decoration: InputDecoration(
+                    labelText: 'Type',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Please enter Type';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 12),
+                TextFormField(
+                  controller: matriculeController,
+                  decoration: InputDecoration(
+                    labelText: 'Matricule',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Please enter Matricule';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -75,19 +102,20 @@ class _CarTableViewState extends State<CarTableView> {
             ),
             ElevatedButton(
               onPressed: () async {
-                car.marque = marqueController.text;
-                car.type = typeController.text;
-                car.matricule = matriculeController.text;
-                try {
-                  Navigator.pop(context);
-                  await CarService.editCar(car);
-                  setState(() {
-                    isLoading = true;
-                  });
-                  fetchData();
-                  _scrollToEditedItem(car);
-                } catch (e) {
-                  print('Error editing car: $e');
+                if (formKey.currentState?.validate() ?? false) {
+                  car.marque = marqueController.text;
+                  car.type = typeController.text;
+                  car.matricule = matriculeController.text;
+
+                  Navigator.pop(context); // Close the edit dialog
+
+                  try {
+                    await Provider.of<CarProvider>(context, listen: false)
+                        .editCar(car);
+                    _scrollToEditedItem(car);
+                  } catch (e) {
+                    print('Error editing car: $e');
+                  } finally {}
                 }
               },
               child: Text('Save'),
@@ -98,40 +126,54 @@ class _CarTableViewState extends State<CarTableView> {
     );
   }
 
-  void _scrollToEditedItem(Car car) {
-    int index = cars.indexOf(car);
-    _scrollController.animateTo(
-      index * _rowHeight,
-      duration: Duration(milliseconds: 500),
-      curve: Curves.easeInOut,
-    );
-  }
-
   Future<void> showAddDialog() async {
     TextEditingController marqueController = TextEditingController();
     TextEditingController typeController = TextEditingController();
     TextEditingController matriculeController = TextEditingController();
+
+    GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
     await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Add Car'),
-          content: Column(
-            children: [
-              TextFormField(
-                controller: marqueController,
-                decoration: InputDecoration(labelText: 'Marque'),
-              ),
-              TextFormField(
-                controller: typeController,
-                decoration: InputDecoration(labelText: 'Type'),
-              ),
-              TextFormField(
-                controller: matriculeController,
-                decoration: InputDecoration(labelText: 'Matricule'),
-              ),
-            ],
+          content: Form(
+            key: formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: marqueController,
+                  decoration: InputDecoration(labelText: 'Marque'),
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Please enter Marque';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: typeController,
+                  decoration: InputDecoration(labelText: 'Type'),
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Please enter Type';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: matriculeController,
+                  decoration: InputDecoration(labelText: 'Matricule'),
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Please enter Matricule';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -142,20 +184,25 @@ class _CarTableViewState extends State<CarTableView> {
             ),
             ElevatedButton(
               onPressed: () async {
-                Car newCar = Car(
-                  id: '', // Assigning an empty string as the ID for a new car
-                  marque: marqueController.text,
-                  type: typeController.text,
-                  matricule: matriculeController.text,
-                );
+                if (formKey.currentState?.validate() ?? false) {
+                  Car newCar = Car(
+                    id: '',
+                    marque: marqueController.text,
+                    type: typeController.text,
+                    matricule: matriculeController.text,
+                  );
 
-                try {
-                  await CarService.addCar(newCar);
-                  Navigator.pop(context);
-                  fetchData();
-                  _scrollToEditedItem(newCar);
-                } catch (e) {
-                  print('Error adding car: $e');
+                  Navigator.pop(context); // Close the add dialog
+
+                  try {
+                    await Provider.of<CarProvider>(context, listen: false)
+                        .addCar(newCar);
+                    _scrollToEditedItem(newCar);
+                  } catch (e) {
+                    print('Error adding car: $e');
+                  } finally {
+                    Navigator.pop(context); // Close the loading dialog
+                  }
                 }
               },
               child: Text('Add'),
@@ -182,9 +229,14 @@ class _CarTableViewState extends State<CarTableView> {
             ),
             ElevatedButton(
               onPressed: () async {
-                await CarService.deleteCar(car.id);
-                fetchData();
-                Navigator.pop(context); // Close the confirmation dialog
+                Navigator.pop(context); // Close the delete confirmation dialog
+
+                try {
+                  await Provider.of<CarProvider>(context, listen: false)
+                      .deleteCar(car.id);
+                } catch (e) {
+                  print('Error deleting car: $e');
+                } finally {}
               },
               child: Text('Delete'),
               style: ButtonStyle(
@@ -199,6 +251,9 @@ class _CarTableViewState extends State<CarTableView> {
 
   @override
   Widget build(BuildContext context) {
+    List<Car> cars = Provider.of<CarProvider>(context).cars;
+    bool isLoading = Provider.of<CarProvider>(context).isLoading;
+
     return Scaffold(
       body: Row(
         children: [
@@ -241,7 +296,7 @@ class _CarTableViewState extends State<CarTableView> {
                   child: Row(
                     children: [
                       Text(
-                        'Car Table View',
+                        'Cars Dashboard',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 24,
@@ -265,18 +320,21 @@ class _CarTableViewState extends State<CarTableView> {
                               DataColumn(label: Text('Actions')),
                             ],
                             rows: cars
+                                .asMap()
+                                .entries
                                 .map(
-                                  (car) => DataRow(
+                                  (entry) => DataRow(
                                     cells: [
-                                      DataCell(Text(car.marque)),
-                                      DataCell(Text(car.type)),
-                                      DataCell(Text(car.matricule)),
+                                      DataCell(Text(entry.value.marque)),
+                                      DataCell(Text(entry.value.type)),
+                                      DataCell(Text(entry.value.matricule)),
                                       DataCell(
                                         Row(
                                           children: [
                                             ElevatedButton.icon(
                                               onPressed: () async {
-                                                await showEditDialog(car);
+                                                await showEditDialog(
+                                                    entry.value);
                                               },
                                               icon: Icon(Icons.edit),
                                               label: Text('Edit'),
@@ -290,7 +348,7 @@ class _CarTableViewState extends State<CarTableView> {
                                             ElevatedButton.icon(
                                               onPressed: () async {
                                                 await showDeleteConfirmationDialog(
-                                                    car);
+                                                    entry.value);
                                               },
                                               icon: Icon(Icons.delete),
                                               label: Text('Delete'),
@@ -298,6 +356,17 @@ class _CarTableViewState extends State<CarTableView> {
                                                 backgroundColor:
                                                     MaterialStateProperty.all<
                                                         Color>(Colors.red),
+                                              ),
+                                            ),
+                                            SizedBox(width: 8),
+                                            ElevatedButton.icon(
+                                              onPressed: () {},
+                                              icon: Icon(Icons.person),
+                                              label: Text('Assign'),
+                                              style: ButtonStyle(
+                                                backgroundColor:
+                                                    MaterialStateProperty.all<
+                                                        Color>(Colors.green),
                                               ),
                                             ),
                                           ],

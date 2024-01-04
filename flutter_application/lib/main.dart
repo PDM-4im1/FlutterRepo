@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
-import 'View/carView.dart'; // Assuming you named the file as car_table_view.dart
+import 'package:provider/provider.dart';
+import '../Models/CarProvider.dart';
+import '../View/carView.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => CarProvider(),
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
+  @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        body: CarTableView(),
-      ),
+      home: CarTableView(),
     );
   }
 }
